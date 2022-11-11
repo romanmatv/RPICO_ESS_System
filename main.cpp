@@ -7,22 +7,44 @@ int interrupt_pin = 0;
 
 sensors_event_t sensEvent;
 
-uint tmr = 0;
+/*uint tmr = 0;
 const uint maxTmr = 200;
 
 uint tmr2 = 0;
-const uint maxTmr2 = 800;
+const uint maxTmr2 = 800;*/
+
+//флаг мигания
+bool blink = false;
+//Пин светодиода
+const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+//Флаг вкл/выкл светодиода
+bool leden = 1;
+//Порог акселерометра, при котором срабатывает мигалка
+const uint gValueBlink = 15;
 
 void accelerometer_interrupt_handler(uint gpio, uint32_t events) {
     printf("interrupt! reasons: 0x%x\n",
      accelerometer.getInterruptSources()); // get interrupt reasons and clear latched motion interrupts
 }
 
+//Функция таймера блинка светодиода
+bool blink_timer(struct repeating_timer *t) {
+    if (blink) leden = !leden;
+    gpio_put(LED_PIN, leden);
+    return true;
+}
+
+//Функция таймера отключения блинка
+int64_t blinkoff_callback(alarm_id_t id, void *user_data) {
+    blink = false
+    // Can return a value here in us to fire in the future
+    return 0;
+}
+
 int main()
 {
     stdio_init_all();
 
-    const uint LED_PIN = PICO_DEFAULT_LED_PIN;
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
@@ -39,15 +61,14 @@ int main()
 
     gpio_set_irq_enabled_with_callback(interrupt_pin, GPIO_IRQ_EDGE_RISE, true, &accelerometer_interrupt_handler);
 
-    bool blink = false;
-
-    bool leden = 1;
+    struct repeating_timer timer;
+    add_repeating_timer_ms(500, blink_timer, NULL, &timer);
 
     while (true) {
-        tmr++;
+        /*tmr++;
         if (blink){
             tmr2++;
-        }
+        }*/
         accelerometer.getEvent(&sensEvent);
 
         //sensEvent.acceleration;
@@ -57,11 +78,12 @@ int main()
 
         float max = MAX(MAX(x, y), z);
 
-        if (max>15){
+        if (max>gValueBlink){
             blink = true;
-            leden = 0;
-            tmr2 = 0;
+            // Call alarm_callback in 2 seconds
+            add_alarm_in_ms(2000, blinkoff_callback, NULL, false);
         }
+        /*
 
         if (tmr>maxTmr){
             tmr = 0;
@@ -73,7 +95,7 @@ int main()
             leden = 1;
         }
 
-        gpio_put(LED_PIN, leden);
+        gpio_put(LED_PIN, leden);*/
 
         
         /*printf("X: %f Y: %f Z: %f\n", 
