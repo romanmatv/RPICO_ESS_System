@@ -22,6 +22,18 @@ bool leden = 1;
 //Порог акселерометра, при котором срабатывает мигалка
 const uint gValueBlink = 15;
 
+//переодичность мигания в мс
+const uint msBlink = 300;
+
+//через сколько секунд отключать мигалку
+const uint sBlinkStop = 5;
+
+//Через сколько раз мигания она останавливается
+const uint cBlinkStop = (sBlinkStop * 1000) / msBlink;
+
+//колличество сделанных миганий
+uint countBlinks = 0;
+
 struct repeating_timer timer;
 
 void accelerometer_interrupt_handler(uint gpio, uint32_t events) {
@@ -31,11 +43,16 @@ void accelerometer_interrupt_handler(uint gpio, uint32_t events) {
 
 //Функция таймера блинка светодиода
 bool blink_timer(struct repeating_timer *t) {
-    if (blink) leden = !leden;
-    gpio_put(LED_PIN, leden);
+    countBlinks++;
+    if (countBlinks>cBlinkStop){
+        gpio_put(LED_PIN, 1);
+    }else{
+        leden = !leden;
+        gpio_put(LED_PIN, leden);
+    }
     return true;
 }
-
+/*
 //Функция таймера отключения блинка
 int64_t blinkoff_callback(alarm_id_t id, void *user_data) {
     printf("BLINK OFF\n");
@@ -45,7 +62,7 @@ int64_t blinkoff_callback(alarm_id_t id, void *user_data) {
     cancel_repeating_timer(&timer);
     gpio_put(LED_PIN, 1);
     return 0;
-}
+}*/
 
 int main()
 {
@@ -92,7 +109,7 @@ int main()
             printf("START BLINK\n");
             blink = true;
             // Call alarm_callback in 2 seconds
-            add_alarm_in_ms(5000, blinkoff_callback, NULL, false);
+            //add_alarm_in_ms(5000, blinkoff_callback, NULL, false);
             add_repeating_timer_ms(300, blink_timer, NULL, &timer);
         }
 
