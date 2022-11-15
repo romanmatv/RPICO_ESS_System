@@ -1,40 +1,45 @@
+/*
+ESS система на основе Raspberry Pi Pico by romanmatv (c)2022
+
+На данный момент работа происходит со встроенным светодиодом
+
+LED_PIN - пин с логическим 1/0 - для включения/выключения света
+
+gValueBlink - порог срабатывания системы
+
+msBlink - частота мигания в мсек
+
+sBlinkStop - через сколько секунд отключается мигание после последнего порога срабатывания
+*/
+
 #include <stdio.h>
 #include "ADXL345.h"
 #include <math.h>
 
-ADXL345 accelerometer;
-int interrupt_pin = 0;
-
-sensors_event_t sensEvent;
-
-/*uint tmr = 0;
-const uint maxTmr = 200;
-
-uint tmr2 = 0;
-const uint maxTmr2 = 800;*/
-
-//флаг мигания
-bool blink = false;
+/* ОСНОВНЫЕ ПАРАМЕТРЫ */
 //Пин светодиода
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-//Флаг вкл/выкл светодиода
-bool leden = 1;
 //Порог акселерометра, при котором срабатывает мигалка
 const uint gValueBlink = 15;
-
 //переодичность мигания в мс
 const uint msBlink = 300;
-
 //через сколько секунд отключать мигалку
 const uint sBlinkStop = 5;
 
+/* ПРОЧИЕ ПЕРЕМЕННЫЕ И КОНСТАНТЫ*/
+//Флаг вкл/выкл светодиода
+bool leden = 1;
 //Через сколько раз мигания она останавливается
 const uint cBlinkStop = (sBlinkStop * 1000) / msBlink;
-
 //колличество сделанных миганий
 uint countBlinks = 0;
-
+//переменная таймера
 struct repeating_timer timer;
+
+/*Переменные акселерометра*/
+ADXL345 accelerometer;
+int interrupt_pin = 0;
+sensors_event_t sensEvent;
 
 void accelerometer_interrupt_handler(uint gpio, uint32_t events) {
     printf("interrupt! reasons: 0x%x\n",
@@ -45,24 +50,16 @@ void accelerometer_interrupt_handler(uint gpio, uint32_t events) {
 bool blink_timer(struct repeating_timer *t) {
     countBlinks++;
     if (countBlinks>cBlinkStop){
+        //Отключаем таймер мигания
         gpio_put(LED_PIN, 1);
+        cancel_repeating_timer(&timer);
+        timer.alarm_id = 0;
     }else{
         leden = !leden;
         gpio_put(LED_PIN, leden);
     }
     return true;
 }
-/*
-//Функция таймера отключения блинка
-int64_t blinkoff_callback(alarm_id_t id, void *user_data) {
-    printf("BLINK OFF\n");
-    blink = false;
-    leden = true;
-    // Can return a value here in us to fire in the future
-    cancel_repeating_timer(&timer);
-    gpio_put(LED_PIN, 1);
-    return 0;
-}*/
 
 int main()
 {
@@ -98,23 +95,14 @@ int main()
 
         float max = MAX(MAX(x, y), z);
 
-        /* 
-        TODO: 
-            устранить баг множественного назначения таймеров
-            Таймер блинка тупо не назначать, если он уже есть
-            А таймер остановки блинка - обнулять
-            А вообще, все это можно заменить одним таймером, который будет сам обнуляться после n раз равное sec_stop / sec_blink
-        */
         if (max>gValueBlink){
-            printf("START BLINK\n");
-            blink = true;
-            // Call alarm_callback in 2 seconds
-            //add_alarm_in_ms(5000, blinkoff_callback, NULL, false);
-            add_repeating_timer_ms(300, blink_timer, NULL, &timer);
+            //printf("START BLINK\n");
+            countBlinks = 0;
+            if (!timer.alarm_id){
+                add_repeating_timer_ms(300, blink_timer, NULL, &timer);
+            }
         }
 
-        printf("acc: %f\n", max);
-
-        sleep_ms(100);
+        //printf("acc: %f\n", max);sleep_ms(100);
     }
 }
