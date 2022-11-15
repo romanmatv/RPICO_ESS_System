@@ -53,7 +53,6 @@ bool blink_timer(struct repeating_timer *t) {
         //Отключаем таймер мигания
         gpio_put(LED_PIN, 1);
         cancel_repeating_timer(&timer);
-        timer.alarm_id = 0;
     }else{
         leden = !leden;
         gpio_put(LED_PIN, leden);
@@ -104,5 +103,6 @@ int main()
         }
 
         //printf("acc: %f\n", max);sleep_ms(100);
+        //sleep_ms(100);
     }
 }
