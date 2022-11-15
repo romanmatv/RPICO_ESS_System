@@ -22,9 +22,9 @@ const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 //Порог акселерометра, при котором срабатывает мигалка
 const uint gValueBlink = 15;
 //переодичность мигания в мс
-const uint msBlink = 300;
+const uint msBlink = 200;
 //через сколько секунд отключать мигалку
-const uint sBlinkStop = 5;
+const uint sBlinkStop = 7;
 
 /* ПРОЧИЕ ПЕРЕМЕННЫЕ И КОНСТАНТЫ*/
 //Флаг вкл/выкл светодиода
@@ -98,7 +98,7 @@ int main()
             //printf("START BLINK\n");
             countBlinks = 0;
             if (!timer.alarm_id){
-                add_repeating_timer_ms(300, blink_timer, NULL, &timer);
+                add_repeating_timer_ms(msBlink, blink_timer, NULL, &timer);
             }
         }
 
